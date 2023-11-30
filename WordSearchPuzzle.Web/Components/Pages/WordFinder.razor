@@ -1,0 +1,169 @@
+﻿@page "/"
+@using System.ComponentModel.DataAnnotations
+@using WordSearchPuzzle.Web.DTOs
+@using WordSearchPuzzle.Web.Static
+@rendermode InteractiveServer
+@inject HttpClient _httpClient
+@inject IJSRuntime _jsRuntime
+
+<PageTitle>Word Search</PageTitle>
+
+<h1>Word Search</h1>
+
+<div class="matrix-container">
+    <EditForm Model="@matrixModel" OnValidSubmit="CreateMatrix">
+        <DataAnnotationsValidator />
+
+        <div class="form-group">
+            <label for="size">Matrix size:</label>
+            <InputNumber id="size" @bind-Value="matrixModel.Size" class="form-control" />
+            <ValidationMessage For="@(() => matrixModel.Size)" />
+        </div>
+
+        <div class="form-group">
+            <label for="letters">Letters to use (without separation):</label>
+            <InputText id="letters" @bind-Value="matrixModel.Letters" class="form-control" />
+            <ValidationMessage For="@(() => matrixModel.Letters)" />
+        </div>
+        <br />
+        <button type="submit" class="btn btn-primary">Create Matrix</button>
+    </EditForm>
+
+    @if (matrix != null)
+    {
+        <div>
+            <br />
+            <h4>Generated matrix:</h4>
+            <table class="matrix-table">
+                @foreach (var row in matrix)
+                {
+                    <tr>
+                        @foreach (var cell in row.Split(" "))
+                        {
+                            <td class="matrix-cell">@cell.ToUpper()</td>
+                        }
+                    </tr>
+                }
+            </table>
+        </div>
+        <br>
+        <EditForm Model="@wordsModel" OnValidSubmit="FindWords">
+            <DataAnnotationsValidator />
+
+            <div class="form-group">
+                <label for="words">Words to search (separated by ';'):</label>
+                <InputText id="words" @bind-Value="wordsModel.Words" class="form-control" />
+                <ValidationMessage For="@(() => wordsModel.Words)" />
+            </div>
+            <br />
+            <button type="submit" class="btn btn-primary">Find Words</button>
+        </EditForm>
+
+        <br />
+        @if (foundWords != null)
+        {
+            <div>
+                <br />
+                <h4>Found Words:</h4>
+                <ul>
+                    @foreach (var word in foundWords)
+                    {
+                        <li>@word.ToUpper()</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(wordsNotFoundMessage))
+        {
+            <div class="alert alert-warning" role="alert">
+                <p>@wordsNotFoundMessage</p>
+            </div>
+        }
+    }
+</div>
+
+
+@code {
+    private MatrixModel matrixModel = new MatrixModel();
+    private WordsModel wordsModel = new WordsModel();
+    private List<string> matrix;
+    private IEnumerable<string> foundWords;
+    private string wordsNotFoundMessage;
+
+    private class MatrixModel : IValidatableObject
+    {
+        [Required(ErrorMessage = "The [Size] field is required.")]
+        [Range(1, 64, ErrorMessage = "The value for field [Size] must be from 1 to 64.")]
+        public int Size { get; set; }
+
+        [Required(ErrorMessage = "The field [Letters to use] is required.")]
+        [StringLength(int.MaxValue, MinimumLength = 1, ErrorMessage = "The field[Letters to use] is required.")]
+        public string Letters { get; set; }
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if ((Size * Size) != Letters.Length)
+            {
+                yield return new ValidationResult($"The number of letters does not match the size of the matrix. It should contain: {Size * Size} letters.", new[] { nameof(Letters) });
+            }
+        }
+    }
+
+    private class WordsModel
+    {
+        [Required(ErrorMessage = "The field [Words to search] is required.")]
+        [StringLength(int.MaxValue, MinimumLength = 1, ErrorMessage = "The field [Words to use] is required.")]
+        public string Words { get; set; }
+    }
+
+    private async Task CreateMatrix()
+    {
+        await _jsRuntime.InvokeVoidAsync("clearHighlights");
+        var isValid = !matrixModel.Validate(null).Any();
+        if (isValid)
+        {
+            int position = 0;
+            matrix = new List<string>();
+
+            for (int i = 0; i < matrixModel.Size; i++)
+            {
+                var charArray = matrixModel.Letters.Substring(position, matrixModel.Size).ToCharArray();
+                matrix.Add(string.Join(" ", charArray));
+                position += matrixModel.Size;
+            }
+        }
+    }
+
+    private async Task FindWords()
+    {
+        var requestObject = new
+        {
+            Matrix = matrix,
+            WordStream = wordsModel.Words.Split(';')
+        };
+
+        var response = await _httpClient.PostAsJsonAsync(Constants.SearchWordEndpoint, requestObject);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var wordInfo = await response.Content.ReadFromJsonAsync<IEnumerable<WordInfo>>();
+            foundWords = wordInfo.Select(x => x.Word);
+
+            if (foundWords == null || foundWords.Count() == 0)
+            {
+                wordsNotFoundMessage = "The words were not found in the letters soup.";
+            }
+            else
+            {
+                wordsNotFoundMessage = null;
+                await _jsRuntime.InvokeVoidAsync("highlightWordsWithCoordinates", wordInfo, matrixModel.Size);
+            }
+        }
+        else
+        {
+            foundWords = null;
+            wordsNotFoundMessage = "An error occurred searching for the words.";
+        }
+    }
+}
