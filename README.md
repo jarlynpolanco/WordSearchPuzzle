@@ -1,4 +1,4 @@
-# WorldSearchPuzzle
+# WordSearchPuzzle
 
 - I made a solution called: WordSearchPuzzle which consists of 4 projects:
   -   WordSearchPuzzle.ApiService  
