@@ -5,15 +5,12 @@
   -   WordSearchPuzzle.AppHost
   -   WordSearchPuzzle.ServiceDefaults
   -   WordSearchPuzzle.Web
+
 - The **WordSearchPuzzle.ApiService** application is the project that creates the array, looks up the words sent in the array and returns the coordinates.
 
 - The application **WordSearchPuzzle.Web** is the one that draws the matrix in a friendly web interface to make it easier to test and visualize the work done, the same consumes an api of: **WordSearchPuzzle.ApiService** and with this data the words found in the matrix are drawn and placed in a list with the words that made a coincidence.
 
 - The **WordSearchPuzzle.AppHost** application serve as crutches to orchestrate the instances of the application (frontend and backend), to visualize the logs, and the performance of the application in a friendly interface using .NET Aspire.
-
-- The **WordSearchPuzzle.AppHost** application serve as crutches to orchestrate the instances of the application (frontend and backend), to visualize the logs, and the performance of the application in a friendly interface using .NET Aspire.
-
-- The **WordSearchPuzzle.ServiceDefaults** it is a project that serves to share classes between other projects.
 
 - The words to search are highlighted in the matrix previously created.
 
