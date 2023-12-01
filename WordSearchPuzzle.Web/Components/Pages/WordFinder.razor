@@ -122,6 +122,9 @@
         var isValid = !matrixModel.Validate(null).Any();
         if (isValid)
         {
+            wordsModel.Words = string.Empty;
+            foundWords = null;
+
             int position = 0;
             matrix = new List<string>();
 
