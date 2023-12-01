@@ -9,82 +9,39 @@ namespace WordSearchPuzzle.ApiService.Services
 
         public IEnumerable<WordInfoResponseDto> Find(IEnumerable<string> wordStream)
         {
-            return FindWords(wordStream);
-        }
-
-        private IEnumerable<WordInfoResponseDto> FindWords(IEnumerable<string> wordStream)
-        {
             var uniqueWords = new HashSet<string>(wordStream);
-
-            for (int x = 0; x < _matrix.Length; x++)
+            foreach (var word in uniqueWords)
             {
-                for (int y = 0; y < _matrix[x].Length; y++)
+                for (int x = 0; x < _matrix.Length; x++)
                 {
-                    foreach (var word in uniqueWords)
+                    var hWord = string.Join("", _matrix[x]);
+                    var vWord = string.Join("", _matrix.Select(row => row[x]));
+
+                    var coordinates = GetWordCoordinates(x, hWord, word, false)
+                        .Concat(GetWordCoordinates(x, vWord, word, true));
+
+                    if (coordinates.Any())
                     {
-                        var coordinates = FindWordCoordinates(word, x, y);
-                        if (coordinates != null)
-                        {
-                            yield return new WordInfoResponseDto { Word = word, Coordinates = coordinates };
-                        }
+                        yield return new WordInfoResponseDto(word, coordinates.ToList());
                     }
                 }
             }
         }
 
-        private List<Coordinate>? FindWordCoordinates(string word, int startX, int startY)
+        private static IEnumerable<Coordinate> GetWordCoordinates(int x, string lineWord, string word, bool isVertical)
         {
-            for (int directionX = -1; directionX <= 1; directionX++)
+            var index = lineWord.IndexOf(word);
+            if (index == -1)
             {
-                for (int directionY = -1; directionY <= 1; directionY++)
+                index = lineWord.IndexOf(string.Join("", word.Reverse()));
+                if (index == -1)
                 {
-                    if (directionX == 0 && directionY == 0)
-                    {
-                        continue;
-                    }
-
-                    var coordinates = CheckWordInDirection(word, startX, startY, directionX, directionY);
-                    if (coordinates != null)
-                    {
-                        return coordinates;
-                    }
+                    return Enumerable.Empty<Coordinate>();
                 }
             }
 
-            return null;
-        }
-
-        private List<Coordinate>? CheckWordInDirection(string word, int startX, int startY, int directionX, int directionY)
-        {
-            int currentX = startX;
-            int currentY = startY;
-
-            int wordLength = word.Length;
-
-            if (currentX + (wordLength - 1) * directionX < 0 ||
-                currentX + (wordLength - 1) * directionX >= _matrix.Length ||
-                currentY + (wordLength - 1) * directionY < 0 ||
-                currentY + (wordLength - 1) * directionY >= _matrix[currentX].Length)
-            {
-                return null;
-            }
-
-            var coordinates = new List<Coordinate>();
-
-            for (int i = 0; i < wordLength; i++)
-            {
-                if (word[i] == '\0' || _matrix[currentX][currentY][0] != word[i])
-                {
-                    return null;
-                }
-
-                coordinates.Add(new Coordinate { X = currentX, Y = currentY });
-
-                currentX += directionX;
-                currentY += directionY;
-            }
-
-            return coordinates;
+            return Enumerable.Range(0, word.Length)
+                .Select(num => new Coordinate(isVertical ? index + num : x, isVertical ? x : index + num));
         }
     }
 }

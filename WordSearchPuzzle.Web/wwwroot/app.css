@@ -58,3 +58,22 @@ h1 {
     font-weight: bold;
     transition: background-color 0.3s ease; 
 }
+
+.highlight2 {
+    background-color: yellowgreen;
+    color: #333;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.found-word {
+    cursor: pointer;
+}
+
+.bi-puzzle-fill::before {
+    content: "\f502";
+    font-size: 30px;
+    position: relative;
+    top: -7px;
+    left: -5px;
+}
